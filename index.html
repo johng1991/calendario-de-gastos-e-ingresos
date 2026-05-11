@@ -3,51 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificador John - Sincronizado</title>
+    <title>Planificador Pro - JOHN GARCIA</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        :root { --primary: #1a252f; --success: #27ae60; --danger: #e74c3c; --accent: #2980b9; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        header { text-align: center; border-bottom: 2px solid var(--primary); margin-bottom: 20px; }
-        .card { padding: 15px; border-radius: 10px; color: white; text-align: center; margin-bottom: 10px; background: var(--primary); }
-        input, select, button { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th { background: #eee; padding: 10px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; }
-        .btn-delete { background: var(--danger); padding: 5px; font-size: 12px; }
+        :root { --primary: #1a252f; --success: #27ae60; --danger: #e74c3c; --accent: #2980b9; --warning: #f39c12; --tdc: #8e44ad; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        header { text-align: center; border-bottom: 3px solid var(--primary); margin-bottom: 25px; padding-bottom: 10px; }
+        .resumen-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { padding: 20px; border-radius: 15px; color: white; text-align: center; transition: transform 0.3s; }
+        .card h4 { margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9; }
+        .card p { margin: 10px 0 0; font-size: 24px; font-weight: bold; }
+        .bg-ingresos { background: #34495e; } .bg-blue { background: var(--accent); } .bg-orange { background: var(--warning); } .bg-green { background: var(--success); }
+        .panel { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #e9ecef; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #666; }
+        input, select, button { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
+        button { cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .table-section { overflow-x: auto; background: white; border-radius: 15px; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { background: var(--primary); color: white; font-size: 13px; }
+        tr:hover { background: #fcfcfc; }
+        .status-pill { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+        .pill-pending { background: #ffeaa7; color: #d35400; }
+        .pill-paid { background: #c6f6d5; color: #27ae60; }
+        .trash-btn { color: #ccc; font-size: 18px; cursor: pointer; }
+        .trash-btn:hover { color: var(--danger); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header><h2>Control de Gastos Sync</h2><p>JOHN GARCIA</p></header>
+    <header>
+        <h1>Planificador Financiero Pro</h1>
+        <p>Control de Ingresos y Gastos - <strong>JOHN GARCIA</strong></p>
+    </header>
 
-    <div class="card">
-        <span>Total Gastos del Mes:</span>
-        <h2 id="totalMes">$0</h2>
+    <div class="resumen-cards">
+        <div class="card bg-ingresos"><h4>Total Ingresos</h4><p id="totalIngresos">$0</p></div>
+        <div class="card bg-blue"><h4>Planificado</h4><p id="totalPlanificado">$0</p></div>
+        <div class="card bg-orange"><h4>Por Pagar</h4><p id="porPagar">$0</p></div>
+        <div class="card bg-green"><h4>Pagado Real</h4><p id="totalReal">$0</p></div>
     </div>
 
-    <div style="background:#f9f9f9; padding:15px; border-radius:10px;">
-        <input type="text" id="desc" placeholder="¿En qué gastaste?">
-        <input type="number" id="monto" placeholder="Monto $">
-        <input type="date" id="fecha">
-        <button onclick="agregarGasto()">+ Registrar Gasto</button>
+    <div class="panel">
+        <h3>💰 Registro de Ingresos</h3>
+        <div class="form-grid">
+            <div><label>Descripción</label><input type="text" id="ingresoDesc" placeholder="Ej: Sueldo, Venta..."></div>
+            <div><label>Monto $</label><input type="number" id="ingresoMonto" placeholder="0.00"></div>
+            <div><button style="background:var(--success); color:white;" onclick="agregarIngreso()">+ Cargar Ingreso</button></div>
+        </div>
     </div>
 
-    <table id="tablaGastos">
-        <thead>
-            <tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th></th></tr>
-        </thead>
-        <tbody id="cuerpo"></tbody>
-    </table>
+    <div class="panel">
+        <h3>💸 Registro de Gastos</h3>
+        <div class="form-grid">
+            <div><label>Descripción</label><input type="text" id="desc" placeholder="¿En qué gastaste?"></div>
+            <div>
+                <label>Categoría</label>
+                <select id="categoria">
+                    <option value="Hogar">🏠 Hogar</option>
+                    <option value="Servicios">⚡ Servicios</option>
+                    <option value="Comida">🍎 Comida</option>
+                    <option value="Transporte">🚗 Transporte</option>
+                    <option value="TDC">💳 Tarjeta de Crédito</option>
+                    <option value="Otros">📦 Otros</option>
+                </select>
+            </div>
+            <div><label>Fecha</label><input type="date" id="fecha"></div>
+            <div><label>Monto Planificado $</label><input type="number" id="monto" placeholder="0.00"></div>
+            <div><button style="background:var(--primary); color:white;" onclick="agregarGasto()">+ Agendar Gasto</button></div>
+        </div>
+    </div>
+
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 10px;">
+        <div>
+            <strong>Ver mes:</strong> 
+            <select id="filtroMes" style="width: auto; display: inline-block;" onchange="renderizarTodo()"></select>
+        </div>
+        <button style="width:auto; background:#27ae60; color:white; padding: 8px 15px;" onclick="exportarExcel()">📥 Exportar Excel</button>
+    </div>
+
+    <div class="table-section">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th>Planificado</th>
+                    <th>Real Pagado</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoTabla"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // TU CONFIGURACIÓN REAL
+    // 1. CONFIGURACIÓN DE TU FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyDAm4D-W2Qcjp_uqE1yb_b84YzniVfbSJQ",
       authDomain: "calendario-de-gastos-8e445.firebaseapp.com",
@@ -60,59 +121,140 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const dbRef = firebase.database().ref('gastos_john');
+    const dbRef = firebase.database().ref('base_datos_john');
 
-    let listaGastos = [];
+    let db = { gastos: [], ingresos: [] };
 
-    // ESCUCHAR CAMBIOS (Sincronización en tiempo real)
+    // 2. SINCRONIZACIÓN EN TIEMPO REAL
     dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        listaGastos = data ? Object.values(data) : [];
-        renderizar();
+        if (data) {
+            db = data;
+            if(!db.gastos) db.gastos = [];
+            if(!db.ingresos) db.ingresos = [];
+            actualizarUI();
+        }
     });
+
+    function actualizarNube() {
+        dbRef.set(db);
+    }
+
+    // 3. LÓGICA DE LA APLICACIÓN
+    function agregarIngreso() {
+        const desc = document.getElementById('ingresoDesc').value;
+        const monto = parseFloat(document.getElementById('ingresoMonto').value);
+        const hoy = new Date().toISOString().substring(0, 7); // Mes actual
+        if (!desc || isNaN(monto)) return alert("Completa los datos del ingreso");
+
+        db.ingresos.push({ id: Date.now(), desc, monto, mes: hoy });
+        actualizarNube();
+        document.getElementById('ingresoDesc').value = "";
+        document.getElementById('ingresoMonto').value = "";
+    }
 
     function agregarGasto() {
         const desc = document.getElementById('desc').value;
-        const monto = document.getElementById('monto').value;
+        const cat = document.getElementById('categoria').value;
         const fecha = document.getElementById('fecha').value;
+        const monto = parseFloat(document.getElementById('monto').value);
+        if (!desc || !fecha || isNaN(monto)) return alert("Completa los datos del gasto");
 
-        if(!desc || !monto || !fecha) return alert("Llena todos los campos");
-
-        const nuevoGasto = {
-            id: Date.now(),
-            desc,
-            monto: parseFloat(monto),
-            fecha
-        };
-
-        // Guardar en la nube
-        dbRef.child(nuevoGasto.id).set(nuevoGasto);
-        
+        db.gastos.push({
+            id: Date.now(), desc, cat, fecha,
+            montoP: monto, montoR: 0, pagado: false
+        });
+        actualizarNube();
         document.getElementById('desc').value = "";
         document.getElementById('monto').value = "";
     }
 
-    function eliminarGasto(id) {
-        dbRef.child(id).remove();
+    function togglePago(id) {
+        const gasto = db.gastos.find(g => g.id === id);
+        if (gasto) {
+            if (!gasto.pagado) {
+                const real = prompt("¿Cuánto pagaste realmente?", gasto.montoP);
+                if (real !== null) {
+                    gasto.montoR = parseFloat(real) || 0;
+                    gasto.pagado = true;
+                }
+            } else {
+                gasto.pagado = false;
+                gasto.montoR = 0;
+            }
+            actualizarNube();
+        }
     }
 
-    function renderizar() {
-        const cuerpo = document.getElementById('cuerpo');
-        const totalHtml = document.getElementById('totalMes');
-        cuerpo.innerHTML = "";
-        let total = 0;
+    function eliminarElemento(tipo, id) {
+        if (!confirm("¿Eliminar este registro?")) return;
+        if (tipo === 'gasto') db.gastos = db.gastos.filter(g => g.id !== id);
+        else db.ingresos = db.ingresos.filter(i => i.id !== id);
+        actualizarNube();
+    }
 
-        listaGastos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).forEach(g => {
-            total += g.monto;
+    function actualizarUI() {
+        poblarFiltroMeses();
+        renderizarTodo();
+    }
+
+    function poblarFiltroMeses() {
+        const selector = document.getElementById('filtroMes');
+        const valorActual = selector.value;
+        const meses = [...new Set(db.gastos.map(g => g.fecha.substring(0, 7)))];
+        const mesHoy = new Date().toISOString().substring(0, 7);
+        if (!meses.includes(mesHoy)) meses.push(mesHoy);
+        meses.sort().reverse();
+
+        selector.innerHTML = meses.map(m => `<option value="${m}">${m}</option>`).join('');
+        if (valorActual && meses.includes(valorActual)) selector.value = valorActual;
+        else selector.value = mesHoy;
+    }
+
+    function renderizarTodo() {
+        const mesSel = document.getElementById('filtroMes').value;
+        const cuerpo = document.getElementById('cuerpoTabla');
+        cuerpo.innerHTML = "";
+
+        let tPlan = 0, tReal = 0, tPend = 0, tIng = 0;
+
+        // Sumar ingresos del mes
+        db.ingresos.filter(i => i.mes === mesSel).forEach(i => tIng += i.monto);
+
+        // Procesar gastos
+        db.gastos.filter(g => g.fecha.startsWith(mesSel))
+        .sort((a,b) => new Date(a.fecha) - new Date(b.fecha))
+        .forEach(g => {
+            tPlan += g.montoP;
+            if (g.pagado) tReal += g.montoR; else tPend += g.montoP;
+
             cuerpo.innerHTML += `
                 <tr>
                     <td>${g.fecha}</td>
+                    <td>${g.cat}</td>
                     <td>${g.desc}</td>
-                    <td>$${g.monto.toLocaleString()}</td>
-                    <td><button class="btn-delete" onclick="eliminarGasto(${g.id})">X</button></td>
+                    <td>$${g.montoP.toLocaleString()}</td>
+                    <td>$${g.montoR.toLocaleString()}</td>
+                    <td>
+                        <span class="status-pill ${g.pagado ? 'pill-paid' : 'pill-pending'}" onclick="togglePago(${g.id})">
+                            ${g.pagado ? '✅ PAGADO' : '⏳ PENDIENTE'}
+                        </span>
+                    </td>
+                    <td><span class="trash-btn" onclick="eliminarElemento('gasto', ${g.id})">🗑️</span></td>
                 </tr>`;
         });
-        totalHtml.innerText = "$" + total.toLocaleString();
+
+        document.getElementById('totalIngresos').textContent = "$" + tIng.toLocaleString();
+        document.getElementById('totalPlanificado').textContent = "$" + tPlan.toLocaleString();
+        document.getElementById('porPagar').textContent = "$" + tPend.toLocaleString();
+        document.getElementById('totalReal').textContent = "$" + tReal.toLocaleString();
+    }
+
+    function exportarExcel() {
+        const ws = XLSX.utils.json_to_sheet(db.gastos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Gastos");
+        XLSX.writeFile(wb, `Finanzas_John_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 </script>
 </body>
