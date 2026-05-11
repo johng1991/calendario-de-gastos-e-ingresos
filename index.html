@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificador Pro by JOHN GARCIA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #1a252f; --success: #27ae60; --danger: #e74c3c; --accent: #2980b9; --warning: #f39c12; --tdc: #8e44ad; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        header { text-align: center; border-bottom: 3px solid var(--primary); margin-bottom: 20px; }
+        header h1 { margin: 0; font-size: 22px; text-transform: uppercase; }
+        header p { margin: 5px 0; font-weight: bold; color: #7f8c8d; }
+
+        /* Dashboard */
+        .resumen-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .card { padding: 15px; border-radius: 12px; color: white; text-align: center; }
+        .card h4 { margin: 0; font-size: 10px; text-transform: uppercase; opacity: 0.9; }
+        .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
+        
+        .bg-ingresos { background: #34495e; }
+        .bg-blue { background: var(--accent); }
+        .bg-orange { background: var(--warning); }
+        .bg-green { background: var(--success); }
+        .bg-tdc-total { background: var(--tdc); }
+        .bg-tdc-deuda { background: #d35400; }
+        .bg-variacion { background: #7f8c8d; }
+
+        .panel { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e9ecef; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+        h3 { font-size: 14px; margin-top: 0; color: var(--primary); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 10px; }
+
+        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; }
+        .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+
+        .table-section { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-bottom: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }
+        th { background: var(--primary); color: white; }
+
+        .dif-positiva { background-color: #d4edda; color: #155724; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
+        .dif-negativa { background-color: #f8d7da; color: #721c24; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
+        
+        .btn-pay { background: var(--success); color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .trash-btn { border:none; background:none; cursor:pointer; color:#bbb; transition: color 0.2s; }
+        .trash-btn:hover { color: var(--danger); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header><h1>Sistema de Control Financiero</h1><p>by JOHN GARCIA</p></header>
+
+    <div class="resumen-cards">
+        <div class="card bg-ingresos"><h4>Ingresos</h4><p id="totalIngresos">$0</p></div>
+        <div class="card bg-blue"><h4>Presupuesto</h4><p id="totalPlanificado">$0</p></div>
+        <div class="card bg-orange"><h4>Por Pagar</h4><p id="porPagar">$0</p></div>
+        <div class="card bg-green"><h4>Pagado Real</h4><p id="totalReal">$0</p></div>
+        <div class="card bg-variacion" id="cardVariacionTotal"><h4>Variación Total</h4><p id="variacionTotal">$0</p></div>
+        <div class="card bg-tdc-total"><h4>Gasto TDC</h4><p id="tdcTotalGasto">$0</p></div>
+        <div class="card bg-tdc-deuda"><h4>Deuda TDC</h4><p id="tdcDeudaReal">$0</p></div>
+    </div>
+
+    <div class="panel">
+        <h3>💰 Registro de Ingresos y Abonos</h3>
+        <div class="form-grid">
+            <input type="text" id="ingresoDesc" placeholder="Fuente (ej. Sueldo)">
+            <input type="number" id="ingresoMonto" placeholder="Monto $">
+            <button style="background:var(--success); color:white; border:none; cursor:pointer; font-weight:bold;" onclick="agregarIngreso()">+ Cargar Ingreso</button>
+            <button style="background:var(--tdc); color:white; border:none; cursor:pointer; font-weight:bold;" onclick="registrarAbonoTDC()">💳 Abonar a TDC</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>💸 Registro de Gastos Planificados</h3>
+        <div class="form-grid">
+            <input type="text" id="desc" placeholder="Descripción">
+            <select id="categoria">
+                <option value="Hogar">🏠 Hogar</option>
+                <option value="Servicios">⚡ Servicios</option>
+                <option value="TDC">💳 Gasto TDC</option>
+                <option value="Comida">🍎 Comida</option>
+                <option value="Salud">🏥 Salud</option>
+                <option value="Ocio">🎉 Ocio</option>
+            </select>
+            <input type="date" id="fecha">
+            <input type="number" id="monto" placeholder="Estimado $">
+            <select id="recurrencia">
+                <option value="once">Este mes</option>
+                <option value="monthly">12 meses</option>
+            </select>
+            <button class="btn-add" onclick="agregarGasto()">+ Agendar</button>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+        <strong>Mes:</strong>
+        <select id="filtroMes" onchange="renderizarTodo()" style="flex-grow:1; font-weight:bold;"></select>
+        <button onclick="exportarExcel()" style="cursor:pointer; background:#2c3e50; color:white; border:none; padding:8px; border-radius:5px;">📥 Excel</button>
+    </div>
+
+    <div class="table-section">
+        <h3>Historial de Ingresos</h3>
+        <div style="overflow-x:auto;">
+            <table style="min-width: 600px;">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th>Monto</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoIngresos"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <h3>Historial de Gastos</h3>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Planificado</th>
+                        <th>Real</th>
+                        <th>Variación</th>
+                        <th>Medio</th>
+                        <th>Fecha Pago</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTabla"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('gastos_john_v11')) || { gastos: [], ingresos: [], abonosTDC: [] };
+
+    function agregarIngreso() {
+        const desc = document.getElementById('ingresoDesc').value;
+        const monto = parseFloat(document.getElementById('ingresoMonto').value);
+        const mes = document.getElementById('filtroMes').value || new Date().toISOString().substring(0, 7);
+        if (!desc || isNaN(monto)) return;
+        db.ingresos.push({ id: Date.now(), desc, monto, mes });
+        document.getElementById('ingresoDesc').value = ""; document.getElementById('ingresoMonto').value = "";
+        actualizarData();
+    }
+
+    function registrarAbonoTDC() {
+        const monto = parseFloat(prompt("Monto del ABONO a TDC:"));
+        if (isNaN(monto)) return;
+        db.abonosTDC.push({ id: Date.now(), monto, mes: document.getElementById('filtroMes').value, fecha: new Date().toLocaleDateString() });
+        actualizarData();
+    }
+
+    function agregarGasto() {
+        const desc = document.getElementById('desc').value;
+        const cat = document.getElementById('categoria').value;
+        const fecha = document.getElementById('fecha').value;
+        const monto = parseFloat(document.getElementById('monto').value);
+        const tipo = document.getElementById('recurrencia').value;
+        if (!desc || !fecha || isNaN(monto)) return;
+
+        const groupId = tipo === 'monthly' ? Date.now() : null;
+        for (let i = 0; i < (tipo === 'monthly' ? 12 : 1); i++) {
+            let f = new Date(fecha + "T00:00:00");
+            f.setMonth(f.getMonth() + i);
+            db.gastos.push({
+                id: Date.now() + Math.random(),
+                groupId, desc, cat, fecha: f.toISOString().split('T')[0],
+                montoP: monto, montoR: 0, pagado: false, fechaPagoReal: "---", medioPago: "---"
+            });
+        }
+        actualizarData();
+    }
+
+    function actualizarData() {
+        localStorage.setItem('gastos_john_v11', JSON.stringify(db));
+        poblarFiltro();
+        renderizarTodo();
+    }
+
+    function poblarFiltro() {
+        const selector = document.getElementById('filtroMes');
+        const anterior = selector.value;
+        const meses = [...new Set(db.gastos.map(i => i.fecha.substring(0, 7)))].sort();
+        if (!meses.length) { selector.innerHTML = `<option value="${new Date().toISOString().substring(0, 7)}">${new Date().toISOString().substring(0, 7)}</option>`; return; }
+        selector.innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+        if (anterior && meses.includes(anterior)) selector.value = anterior;
+    }
+
+    function renderizarTodo() {
+        const mesSel = document.getElementById('filtroMes').value;
+        
+        // RENDER INGRESOS
+        const cuerpoI = document.getElementById('cuerpoIngresos');
+        cuerpoI.innerHTML = "";
+        let tIng = 0;
+        db.ingresos.filter(i => i.mes === mesSel).forEach(i => {
+            tIng += i.monto;
+            cuerpoI.innerHTML += `<tr>
+                <td>${i.desc}</td><td>$${i.monto.toLocaleString()}</td>
+                <td><button class="trash-btn" onclick="eliminarIngreso(${i.id})">🗑️</button></td>
+            </tr>`;
+        });
+
+        // RENDER GASTOS
+        const cuerpoG = document.getElementById('cuerpoTabla');
+        cuerpoG.innerHTML = "";
+        let tPlan = 0, tReal = 0, tPend = 0, tTdcGasto = 0, vTotal = 0;
+
+        db.gastos.filter(g => g.fecha.startsWith(mesSel)).sort((a,b) => new Date(a.fecha)-new Date(b.fecha)).forEach(g => {
+            tPlan += g.montoP;
+            if (g.pagado) {
+                tReal += g.montoR;
+                vTotal += (g.montoR - g.montoP);
+                if (g.cat === 'TDC' || g.medioPago === 'TDC') tTdcGasto += g.montoR;
+            } else { tPend += g.montoP; }
+            
+            const dif = g.pagado ? g.montoR - g.montoP : 0;
+            const claseDif = g.pagado ? (dif > 0 ? "dif-negativa" : (dif < 0 ? "dif-positiva" : "")) : "";
+
+            cuerpoG.innerHTML += `<tr>
+                <td>${g.fecha}</td><td><small>${g.cat}</small></td><td><b>${g.desc}</b></td>
+                <td>$${g.montoP.toLocaleString()}</td><td>${g.pagado ? '$'+g.montoR.toLocaleString() : '---'}</td>
+                <td><span class="${claseDif}">${g.pagado ? '$'+Math.abs(dif).toLocaleString() : '---'}</span></td>
+                <td><small>${g.medioPago}</small></td><td><small>${g.fechaPagoReal}</small></td>
+                <td>
+                    ${g.pagado ? '✅' : `<button class="btn-pay" onclick="pagar(${g.id})">Pagar</button>`}
+                    <button class="trash-btn" onclick="eliminarGasto(${g.id})">🗑️</button>
+                </td>
+            </tr>`;
+        });
+
+        let tAbonos = db.abonosTDC.filter(a => a.mes === mesSel).reduce((s, a) => s + a.monto, 0);
+        document.getElementById('totalIngresos').textContent = "$" + tIng.toLocaleString();
+        document.getElementById('totalPlanificado').textContent = "$" + tPlan.toLocaleString();
+        document.getElementById('porPagar').textContent = "$" + tPend.toLocaleString();
+        document.getElementById('totalReal').textContent = "$" + tReal.toLocaleString();
+        document.getElementById('variacionTotal').textContent = (vTotal > 0 ? "+" : "") + "$" + vTotal.toLocaleString();
+        document.getElementById('cardVariacionTotal').style.background = vTotal > 0 ? "#e74c3c" : (vTotal < 0 ? "#27ae60" : "#7f8c8d");
+        document.getElementById('tdcTotalGasto').textContent = "$" + tTdcGasto.toLocaleString();
+        document.getElementById('tdcDeudaReal').textContent = "$" + (tTdcGasto - tAbonos).toLocaleString();
+    }
+
+    function pagar(id) {
+        const monto = parseFloat(prompt("¿Monto pagado?")); if (isNaN(monto)) return;
+        const medio = prompt("¿Medio? (TDC, Nequi, Efectivo):", "Efectivo");
+        const g = db.gastos.find(i => i.id === id);
+        g.montoR = monto; g.medioPago = medio; g.fechaPagoReal = new Date().toLocaleDateString(); g.pagado = true;
+        actualizarData();
+    }
+
+    function eliminarIngreso(id) {
+        if(confirm("¿Eliminar este registro de ingreso?")) {
+            db.ingresos = db.ingresos.filter(i => i.id !== id);
+            actualizarData();
+        }
+    }
+
+    function eliminarGasto(id) {
+        const item = db.gastos.find(g => g.id === id);
+        if (!item) return;
+        let msg = `¿Borrar "${item.desc}"?\n\n- Escribe 'ESTE' para borrar solo hoy.\n- Escribe 'TODOS' para borrar serie futura.\n- Escribe 'CANCELAR' para salir.`;
+        if(!item.groupId) msg = "¿Borrar este gasto? Escribe 'BORRAR' para confirmar.";
+        
+        const resp = prompt(msg);
+        if (!resp) return;
+        const act = resp.toUpperCase().trim();
+        if (act === 'CANCELAR' || act === 'DESCARTAR') return;
+
+        if (item.groupId) {
+            if (act === 'ESTE') db.gastos = db.gastos.filter(g => g.id !== id);
+            else if (act === 'TODOS') db.gastos = db.gastos.filter(g => !(g.groupId === item.groupId && g.fecha >= item.fecha));
+        } else {
+            if (act === 'BORRAR') db.gastos = db.gastos.filter(g => g.id !== id);
+        }
+        actualizarData();
+    }
+
+    function exportarExcel() {
+        const wsG = XLSX.utils.json_to_sheet(db.gastos);
+        const wsI = XLSX.utils.json_to_sheet(db.ingresos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsG, "Gastos");
+        XLSX.utils.book_append_sheet(wb, wsI, "Ingresos");
+        XLSX.writeFile(wb, "Planificador_John_Master.xlsx");
+    }
+
+    actualizarData();
+</script>
+</body>
+</html>
