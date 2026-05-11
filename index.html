@@ -79,13 +79,16 @@
 <script>
     // 2. CONFIGURACIÓN DE TU FIREBASE (Extraído de tu imagen)
     const firebaseConfig = {
-      apiKey: "AIzaSyDAm4D-W2Qcjp_uqE1yb_b84YzniVfbSJQ",
-      authDomain: "calendario-de-gastos-8e445.firebaseapp.com",
-      projectId: "calendario-de-gastos-8e445",
-      storageBucket: "calendario-de-gastos-8e445.appspot.com",
-      messagingSenderId: "888158866506",
-      appId: "1:888158866506:web:555c751df0b1ca60212ab3"
-    };
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDAm4D-W2Qcjp_uqE1yb_b84YzniVfbSJQ",
+  authDomain: "calendario-de-gastos-8e445.firebaseapp.com",
+  projectId: "calendario-de-gastos-8e445",
+  storageBucket: "calendario-de-gastos-8e445.firebasestorage.app",
+  messagingSenderId: "888158866506",
+  appId: "1:888158866506:web:555c751df0b1ca60212ab3",
+  measurementId: "G-N0EEWH6J31"
+};
 
     // 3. INICIALIZAR FIREBASE
     firebase.initializeApp(firebaseConfig);
