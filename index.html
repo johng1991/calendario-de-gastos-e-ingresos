@@ -3,180 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificador Pro - Sincronizado</title>
+    <title>Planificador John - Sincronizado</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        :root { --primary: #1a252f; --success: #27ae60; --danger: #e74c3c; --accent: #2980b9; --warning: #f39c12; --tdc: #8e44ad; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
-        .container { max-width: 1300px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        header { text-align: center; border-bottom: 3px solid var(--primary); margin-bottom: 20px; }
-        .resumen-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .card { padding: 15px; border-radius: 12px; color: white; text-align: center; }
-        .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
-        .bg-ingresos { background: #34495e; } .bg-blue { background: var(--accent); } .bg-orange { background: var(--warning); } .bg-green { background: var(--success); }
-        .panel { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e9ecef; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }
-        th { background: var(--primary); color: white; }
-        .trash-btn { border:none; background:none; cursor:pointer; color:#bbb; }
+        :root { --primary: #1a252f; --success: #27ae60; --danger: #e74c3c; --accent: #2980b9; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        header { text-align: center; border-bottom: 2px solid var(--primary); margin-bottom: 20px; }
+        .card { padding: 15px; border-radius: 10px; color: white; text-align: center; margin-bottom: 10px; background: var(--primary); }
+        input, select, button { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th { background: #eee; padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .btn-delete { background: var(--danger); padding: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header><h1>Control Financiero Sync</h1><p>by JOHN GARCIA</p></header>
+    <header><h2>Control de Gastos Sync</h2><p>JOHN GARCIA</p></header>
 
-    <div class="resumen-cards">
-        <div class="card bg-ingresos"><h4>Ingresos</h4><p id="totalIngresos">$0</p></div>
-        <div class="card bg-blue"><h4>Presupuesto</h4><p id="totalPlanificado">$0</p></div>
-        <div class="card bg-orange"><h4>Por Pagar</h4><p id="porPagar">$0</p></div>
-        <div class="card bg-green"><h4>Pagado Real</h4><p id="totalReal">$0</p></div>
+    <div class="card">
+        <span>Total Gastos del Mes:</span>
+        <h2 id="totalMes">$0</h2>
     </div>
 
-    <div class="panel">
-        <h3>💰 Registro de Ingresos</h3>
-        <div class="form-grid">
-            <input type="text" id="ingresoDesc" placeholder="Fuente">
-            <input type="number" id="ingresoMonto" placeholder="Monto $">
-            <button style="background:var(--success); color:white;" onclick="agregarIngreso()">+ Cargar</button>
-        </div>
+    <div style="background:#f9f9f9; padding:15px; border-radius:10px;">
+        <input type="text" id="desc" placeholder="¿En qué gastaste?">
+        <input type="number" id="monto" placeholder="Monto $">
+        <input type="date" id="fecha">
+        <button onclick="agregarGasto()">+ Registrar Gasto</button>
     </div>
 
-    <div class="panel">
-        <h3>💸 Registro de Gastos</h3>
-        <div class="form-grid">
-            <input type="text" id="desc" placeholder="Descripción">
-            <select id="categoria">
-                <option value="Hogar">🏠 Hogar</option>
-                <option value="Servicios">⚡ Servicios</option>
-                <option value="Comida">🍎 Comida</option>
-            </select>
-            <input type="date" id="fecha">
-            <input type="number" id="monto" placeholder="Monto $">
-            <button style="background:var(--primary); color:white;" onclick="agregarGasto()">+ Agendar</button>
-        </div>
-    </div>
-
-    <div style="margin-bottom: 10px;">
-        <strong>Mes:</strong> <select id="filtroMes" onchange="renderizarTodo()"></select>
-    </div>
-
-    <div class="table-section">
-        <table>
-            <thead>
-                <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Planificado</th><th>Real</th><th>Acción</th></tr>
-            </thead>
-            <tbody id="cuerpoTabla"></tbody>
-        </table>
-    </div>
+    <table id="tablaGastos">
+        <thead>
+            <tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th></th></tr>
+        </thead>
+        <tbody id="cuerpo"></tbody>
+    </table>
 </div>
 
 <script>
-    // 2. CONFIGURACIÓN DE TU FIREBASE (Extraído de tu imagen)
+    // TU CONFIGURACIÓN REAL
     const firebaseConfig = {
-      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyDAm4D-W2Qcjp_uqE1yb_b84YzniVfbSJQ",
-  authDomain: "calendario-de-gastos-8e445.firebaseapp.com",
-  projectId: "calendario-de-gastos-8e445",
-  storageBucket: "calendario-de-gastos-8e445.firebasestorage.app",
-  messagingSenderId: "888158866506",
-  appId: "1:888158866506:web:555c751df0b1ca60212ab3",
-  measurementId: "G-N0EEWH6J31"
-};
+      apiKey: "AIzaSyDAm4D-W2Qcjp_uqE1yb_b84YzniVfbSJQ",
+      authDomain: "calendario-de-gastos-8e445.firebaseapp.com",
+      projectId: "calendario-de-gastos-8e445",
+      storageBucket: "calendario-de-gastos-8e445.firebasestorage.app",
+      messagingSenderId: "888158866506",
+      appId: "1:888158866506:web:555c751df0b1ca60212ab3",
+      measurementId: "G-N0EEWH6J31",
+      databaseURL: "https://calendario-de-gastos-8e445-default-rtdb.firebaseio.com"
+    };
 
-    // 3. INICIALIZAR FIREBASE
     firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const dbRef = firebase.database().ref('gastos_john');
 
-    let db = { gastos: [], ingresos: [] };
+    let listaGastos = [];
 
-    // 4. CARGA AUTOMÁTICA DESDE LA NUBE
-    database.ref('finanzas_john').on('value', (snapshot) => {
+    // ESCUCHAR CAMBIOS (Sincronización en tiempo real)
+    dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-            db = data;
-            if(!db.gastos) db.gastos = [];
-            if(!db.ingresos) db.ingresos = [];
-            actualizarUI();
-        }
+        listaGastos = data ? Object.values(data) : [];
+        renderizar();
     });
-
-    function actualizarData() {
-        // GUARDAR EN LA NUBE
-        database.ref('finanzas_john').set(db);
-    }
-
-    function agregarIngreso() {
-        const desc = document.getElementById('ingresoDesc').value;
-        const monto = parseFloat(document.getElementById('ingresoMonto').value);
-        const mes = new Date().toISOString().substring(0, 7);
-        if (!desc || isNaN(monto)) return;
-        db.ingresos.push({ id: Date.now(), desc, monto, mes });
-        actualizarData();
-    }
 
     function agregarGasto() {
         const desc = document.getElementById('desc').value;
-        const cat = document.getElementById('categoria').value;
+        const monto = document.getElementById('monto').value;
         const fecha = document.getElementById('fecha').value;
-        const monto = parseFloat(document.getElementById('monto').value);
-        if (!desc || !fecha || isNaN(monto)) return;
 
-        db.gastos.push({
-            id: Date.now(), desc, cat, fecha,
-            montoP: monto, montoR: 0, pagado: false
-        });
-        actualizarData();
-    }
+        if(!desc || !monto || !fecha) return alert("Llena todos los campos");
 
-    function actualizarUI() {
-        poblarFiltro();
-        renderizarTodo();
-    }
+        const nuevoGasto = {
+            id: Date.now(),
+            desc,
+            monto: parseFloat(monto),
+            fecha
+        };
 
-    function poblarFiltro() {
-        const selector = document.getElementById('filtroMes');
-        const anterior = selector.value;
-        const meses = [...new Set(db.gastos.map(i => i.fecha.substring(0, 7)))].sort();
-        if (!meses.length) { selector.innerHTML = `<option value="${new Date().toISOString().substring(0, 7)}">${new Date().toISOString().substring(0, 7)}</option>`; return; }
-        selector.innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-        if (anterior && meses.includes(anterior)) selector.value = anterior;
-    }
-
-    function renderizarTodo() {
-        const mesSel = document.getElementById('filtroMes').value;
-        const cuerpoG = document.getElementById('cuerpoTabla');
-        cuerpoG.innerHTML = "";
-        let tPlan = 0, tReal = 0, tPend = 0, tIng = 0;
-
-        db.ingresos.filter(i => i.mes === mesSel).forEach(i => tIng += i.monto);
-
-        db.gastos.filter(g => g.fecha.startsWith(mesSel)).forEach(g => {
-            tPlan += g.montoP;
-            if (g.pagado) tReal += g.montoR; else tPend += g.montoP;
-            
-            cuerpoG.innerHTML += `<tr>
-                <td>${g.fecha}</td><td>${g.cat}</td><td>${g.desc}</td>
-                <td>$${g.montoP.toLocaleString()}</td><td>$${g.montoR.toLocaleString()}</td>
-                <td><button class="trash-btn" onclick="eliminarGasto(${g.id})">🗑️</button></td>
-            </tr>`;
-        });
-
-        document.getElementById('totalIngresos').textContent = "$" + tIng.toLocaleString();
-        document.getElementById('totalPlanificado').textContent = "$" + tPlan.toLocaleString();
-        document.getElementById('porPagar').textContent = "$" + tPend.toLocaleString();
-        document.getElementById('totalReal').textContent = "$" + tReal.toLocaleString();
+        // Guardar en la nube
+        dbRef.child(nuevoGasto.id).set(nuevoGasto);
+        
+        document.getElementById('desc').value = "";
+        document.getElementById('monto').value = "";
     }
 
     function eliminarGasto(id) {
-        db.gastos = db.gastos.filter(g => g.id !== id);
-        actualizarData();
+        dbRef.child(id).remove();
+    }
+
+    function renderizar() {
+        const cuerpo = document.getElementById('cuerpo');
+        const totalHtml = document.getElementById('totalMes');
+        cuerpo.innerHTML = "";
+        let total = 0;
+
+        listaGastos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).forEach(g => {
+            total += g.monto;
+            cuerpo.innerHTML += `
+                <tr>
+                    <td>${g.fecha}</td>
+                    <td>${g.desc}</td>
+                    <td>$${g.monto.toLocaleString()}</td>
+                    <td><button class="btn-delete" onclick="eliminarGasto(${g.id})">X</button></td>
+                </tr>`;
+        });
+        totalHtml.innerText = "$" + total.toLocaleString();
     }
 </script>
 </body>
