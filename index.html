@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Maestro - JOHN GARCIA</title>
+    <title>Planificador Maestro - Sincronizado</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -18,7 +18,7 @@
         .resumen-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .card { padding: 15px; border-radius: 12px; color: white; text-align: center; }
         .card h4 { margin: 0; font-size: 10px; text-transform: uppercase; opacity: 0.9; }
-        .card p { margin: 5px 0 0; font-size: 18px; font-weight: bold; }
+        .card p { margin: 5px 0; font-size: 18px; font-weight: bold; }
         .bg-ingresos { background: #34495e; } .bg-blue { background: var(--accent); } .bg-orange { background: var(--warning); }
         .bg-green { background: var(--success); } .bg-tdc-total { background: var(--tdc); }
         .bg-tdc-deuda { background: #d35400; } .bg-variacion { background: #7f8c8d; }
@@ -33,14 +33,14 @@
         .dif-positiva { background-color: #d4edda; color: #155724; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
         .dif-negativa { background-color: #f8d7da; color: #721c24; font-weight: bold; padding: 3px 6px; border-radius: 4px; }
         .btn-pay { background: var(--success); color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .trash-btn { border:none; background:none; cursor:pointer; color:#bbb; transition: color 0.2s; }
+        .trash-btn { border:none; background:none; cursor:pointer; color:#bbb; transition: color 0.2s; font-size: 16px; }
         .trash-btn:hover { color: var(--danger); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header><h1>Sistema de Control Financiero</h1><p>by JOHN GARCIA</p></header>
+    <header><h1>Sistema de Control Financiero</h1><p>JOHN GARCIA</p></header>
 
     <div class="resumen-cards">
         <div class="card bg-ingresos"><h4>Ingresos</h4><p id="totalIngresos">$0</p></div>
@@ -73,6 +73,7 @@
                 <option value="Comida">🍎 Comida</option>
                 <option value="Salud">🏥 Salud</option>
                 <option value="Ocio">🎉 Ocio</option>
+                <option value="Otros">📦 Otros</option>
             </select>
             <input type="date" id="fecha">
             <input type="number" id="monto" placeholder="Estimado $">
@@ -85,34 +86,21 @@
     </div>
 
     <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
-        <strong>Mes:</strong>
+        <strong>Mes seleccionado:</strong>
         <select id="filtroMes" onchange="renderizarTodo()" style="flex-grow:1; font-weight:bold;"></select>
         <button onclick="exportarExcel()" style="cursor:pointer; background:#2c3e50; color:white; border:none; padding:8px; border-radius:5px;">📥 Excel</button>
     </div>
 
     <div class="table-section">
         <h3>Historial de Ingresos</h3>
-        <div style="overflow-x:auto;">
-            <table style="min-width: 600px;">
-                <thead>
-                    <tr><th>Descripción</th><th>Monto</th><th>Acción</th></tr>
-                </thead>
-                <tbody id="cuerpoIngresos"></tbody>
-            </table>
-        </div>
+        <div style="overflow-x:auto;"><table style="min-width: 600px;"><thead><tr><th>Descripción</th><th>Monto</th><th>Acción</th></tr></thead><tbody id="cuerpoIngresos"></tbody></table></div>
     </div>
 
     <div class="table-section">
         <h3>Historial de Gastos</h3>
         <div style="overflow-x:auto;">
             <table>
-                <thead>
-                    <tr>
-                        <th>Fecha</th><th>Categoría</th><th>Descripción</th>
-                        <th>Planificado</th><th>Real</th><th>Variación</th>
-                        <th>Medio</th><th>Fecha Pago</th><th>Acción</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Planificado</th><th>Real</th><th>Variación</th><th>Medio</th><th>Fecha Pago</th><th>Acción</th></tr></thead>
                 <tbody id="cuerpoTabla"></tbody>
             </table>
         </div>
@@ -137,7 +125,7 @@
 
     let db = { gastos: [], ingresos: [], abonosTDC: [] };
 
-    // ESCUCHAR CAMBIOS EN LA NUBE
+    // ESCUCHA DE DATOS EN TIEMPO REAL
     dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -150,7 +138,7 @@
         renderizarTodo();
     });
 
-    function actualizarData() {
+    function actualizarNube() {
         dbRef.set(db);
     }
 
@@ -161,14 +149,14 @@
         if (!desc || isNaN(monto)) return;
         db.ingresos.push({ id: Date.now(), desc, monto, mes });
         document.getElementById('ingresoDesc').value = ""; document.getElementById('ingresoMonto').value = "";
-        actualizarData();
+        actualizarNube();
     }
 
     function registrarAbonoTDC() {
         const monto = parseFloat(prompt("Monto del ABONO a TDC:"));
         if (isNaN(monto)) return;
         db.abonosTDC.push({ id: Date.now(), monto, mes: document.getElementById('filtroMes').value, fecha: new Date().toLocaleDateString() });
-        actualizarData();
+        actualizarNube();
     }
 
     function agregarGasto() {
@@ -189,35 +177,80 @@
                 montoP: monto, montoR: 0, pagado: false, fechaPagoReal: "---", medioPago: "---"
             });
         }
-        actualizarData();
+        document.getElementById('desc').value = ""; document.getElementById('monto').value = "";
+        actualizarNube();
+    }
+
+    // --- FUNCIONES DE ELIMINACIÓN ---
+    function eliminarIngreso(id) {
+        if(confirm("¿Eliminar este registro de ingreso?")) {
+            db.ingresos = db.ingresos.filter(i => i.id !== id);
+            actualizarNube();
+        }
+    }
+
+    function eliminarGasto(id) {
+        const item = db.gastos.find(g => g.id === id);
+        if (!item) return;
+
+        if (item.groupId) {
+            let msg = `Gasto Recurrente:\n\n- Escribe 'ESTE' para borrar solo este mes.\n- Escribe 'TODOS' para borrar este y los meses futuros.\n- Pulsa CANCELAR para salir.`;
+            const resp = prompt(msg);
+            if (!resp) return;
+            const accion = resp.toUpperCase().trim();
+            if (accion === 'ESTE') {
+                db.gastos = db.gastos.filter(g => g.id !== id);
+            } else if (accion === 'TODOS') {
+                db.gastos = db.gastos.filter(g => !(g.groupId === item.groupId && g.fecha >= item.fecha));
+            } else {
+                return;
+            }
+        } else {
+            if (confirm(`¿Borrar "${item.desc}"?`)) {
+                db.gastos = db.gastos.filter(g => g.id !== id);
+            }
+        }
+        actualizarNube();
+    }
+
+    function pagar(id) {
+        const monto = parseFloat(prompt("¿Monto pagado realmente?")); if (isNaN(monto)) return;
+        const medio = prompt("¿Medio de pago? (Efectivo, TDC, Nequi):", "Efectivo");
+        const g = db.gastos.find(i => i.id === id);
+        if(g) {
+            g.montoR = monto; g.medioPago = medio; g.fechaPagoReal = new Date().toLocaleDateString(); g.pagado = true;
+            actualizarNube();
+        }
     }
 
     function poblarFiltro() {
         const selector = document.getElementById('filtroMes');
         const anterior = selector.value;
         const meses = [...new Set(db.gastos.map(i => i.fecha.substring(0, 7)))].sort();
-        if (!meses.length) { selector.innerHTML = `<option value="${new Date().toISOString().substring(0, 7)}">${new Date().toISOString().substring(0, 7)}</option>`; return; }
+        if (!meses.length) { 
+            const hoy = new Date().toISOString().substring(0, 7);
+            selector.innerHTML = `<option value="${hoy}">${hoy.toUpperCase()}</option>`; 
+            return; 
+        }
         selector.innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
         if (anterior && meses.includes(anterior)) selector.value = anterior;
     }
 
     function renderizarTodo() {
         const mesSel = document.getElementById('filtroMes').value;
-        
-        // INGRESOS
         const cuerpoI = document.getElementById('cuerpoIngresos');
-        cuerpoI.innerHTML = "";
-        let tIng = 0;
+        const cuerpoG = document.getElementById('cuerpoTabla');
+        cuerpoI.innerHTML = ""; cuerpoG.innerHTML = "";
+
+        let tIng = 0, tPlan = 0, tReal = 0, tPend = 0, tTdcGasto = 0, vTotal = 0;
+
+        // Render Ingresos
         db.ingresos.filter(i => i.mes === mesSel).forEach(i => {
             tIng += i.monto;
             cuerpoI.innerHTML += `<tr><td>${i.desc}</td><td>$${i.monto.toLocaleString()}</td><td><button class="trash-btn" onclick="eliminarIngreso(${i.id})">🗑️</button></td></tr>`;
         });
 
-        // GASTOS
-        const cuerpoG = document.getElementById('cuerpoTabla');
-        cuerpoG.innerHTML = "";
-        let tPlan = 0, tReal = 0, tPend = 0, tTdcGasto = 0, vTotal = 0;
-
+        // Render Gastos
         db.gastos.filter(g => g.fecha.startsWith(mesSel)).sort((a,b) => new Date(a.fecha)-new Date(b.fecha)).forEach(g => {
             tPlan += g.montoP;
             if (g.pagado) {
@@ -250,39 +283,6 @@
         document.getElementById('cardVariacionTotal').style.background = vTotal > 0 ? "#e74c3c" : (vTotal < 0 ? "#27ae60" : "#7f8c8d");
         document.getElementById('tdcTotalGasto').textContent = "$" + tTdcGasto.toLocaleString();
         document.getElementById('tdcDeudaReal').textContent = "$" + (tTdcGasto - tAbonos).toLocaleString();
-    }
-
-    function pagar(id) {
-        const monto = parseFloat(prompt("¿Monto pagado?")); if (isNaN(monto)) return;
-        const medio = prompt("¿Medio? (TDC, Nequi, Efectivo):", "Efectivo");
-        const g = db.gastos.find(i => i.id === id);
-        g.montoR = monto; g.medioPago = medio; g.fechaPagoReal = new Date().toLocaleDateString(); g.pagado = true;
-        actualizarData();
-    }
-
-    function eliminarIngreso(id) {
-        if(confirm("¿Eliminar este registro de ingreso?")) {
-            db.ingresos = db.ingresos.filter(i => i.id !== id);
-            actualizarData();
-        }
-    }
-
-    function eliminarGasto(id) {
-        const item = db.gastos.find(g => g.id === id);
-        if (!item) return;
-        let msg = `¿Borrar "${item.desc}"?\n\n- Escribe 'ESTE' para borrar solo hoy.\n- Escribe 'TODOS' para borrar serie futura.`;
-        if(!item.groupId) msg = "¿Borrar este gasto? Escribe 'BORRAR' para confirmar.";
-        
-        const resp = prompt(msg);
-        if (!resp) return;
-        const act = resp.toUpperCase().trim();
-        if (item.groupId) {
-            if (act === 'ESTE') db.gastos = db.gastos.filter(g => g.id !== id);
-            else if (act === 'TODOS') db.gastos = db.gastos.filter(g => !(g.groupId === item.groupId && g.fecha >= item.fecha));
-        } else {
-            if (act === 'BORRAR') db.gastos = db.gastos.filter(g => g.id !== id);
-        }
-        actualizarData();
     }
 
     function exportarExcel() {
